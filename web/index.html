@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网络攻击检测系统</title>
+    <!-- 引入Chart.js用于数据可视化 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 引入自定义样式 -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">网络攻击检测系统</h1>
+        
+        <!-- 文件上传区域 -->
+        <div class="file-upload-area" onclick="document.getElementById('file-input').click()">
+            <div class="file-icon">📁</div>
+            <p class="file-upload-text">点击或拖拽CSV文件到此处上传</p>
+            <span id="file-name">未选择文件</span>
+            <input type="file" id="file-input" accept=".csv" class="hidden">
+        </div>
+        
+        <!-- 模型选择 -->
+        <div class="model-selection">
+            <label for="model-select" class="model-label">选择预测模型:</label>
+            <select id="model-select" class="model-select">
+                <option value="catboost">CatBoost模型：偏向于检测</option>
+                <option value="random_forest">随机森林模型：极度偏向检测攻击，最容易误报</option>
+                <option value="xgboost">XGBoost模型：整体比较平衡</option>
+                <option value="stacking">Stacking集成模型：最均衡，最不容易误报</option>
+            </select>
+        </div>
+        
+        <!-- 预测按钮 -->
+        <button id="predict-btn" disabled>开始预测</button>
+        
+        <!-- 加载状态 -->
+        <div id="loading" class="loading">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">正在分析数据，请稍候...</p>
+        </div>
+    </div>
+    
+    <!-- 结果弹窗 -->
+    <div id="result-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 class="modal-title">检测结果</h2>
+            
+            <!-- 结果统计 -->
+            <div class="result-stats">
+                <div class="stat-item">
+                    <div class="stat-number" id="total-records">0</div>
+                    <div class="stat-label">总记录数</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="attacked-records">0</div>
+                    <div class="stat-label">受攻击记录数</div>
+                </div>
+            </div>
+            
+            <!-- 攻击详情 -->
+            <div class="attack-details">
+                <h3 class="section-title">受攻击设备详情</h3>
+                <div class="result-items" id="attack-details">
+                    <!-- 结果将在这里动态显示 -->
+                </div>
+            </div>
+            
+            <!-- 攻击类型分布图表 -->
+            <div class="attack-distribution">
+                <h3 class="section-title">攻击类型分布</h3>
+                <div class="chart-container">
+                    <canvas id="attack-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 引入JavaScript -->
+    <script src="script.js"></script>
+</body>
+</html>

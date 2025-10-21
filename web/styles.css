@@ -1,0 +1,344 @@
+/* 全局样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #333;
+}
+
+/* 主容器 */
+.container {
+    background-color: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    max-width: 800px;
+    width: 100%;
+    margin: 20px;
+}
+
+/* 标题样式 */
+.title {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #4a5568;
+    font-size: 28px;
+    font-weight: 700;
+}
+
+/* 文件上传区域 */
+.file-upload-area {
+    border: 2px dashed #cbd5e0;
+    border-radius: 10px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #f7fafc;
+    margin-bottom: 30px;
+}
+
+.file-upload-area:hover {
+    border-color: #667eea;
+    background-color: #edf2f7;
+}
+
+.file-icon {
+    font-size: 50px;
+    color: #a0aec0;
+    margin-bottom: 15px;
+}
+
+.file-upload-text {
+    color: #4a5568;
+    margin-bottom: 10px;
+}
+
+.file-name {
+    color: #667eea;
+    font-weight: 600;
+    display: block;
+    margin-top: 10px;
+}
+
+.hidden {
+    display: none;
+}
+
+/* 模型选择样式 */
+.model-selection {
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.model-label {
+    display: block;
+    margin-bottom: 10px;
+    color: #4a5568;
+    font-weight: 600;
+}
+
+.model-select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #cbd5e0;
+    border-radius: 10px;
+    font-size: 16px;
+    background-color: white;
+    color: #4a5568;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.model-select:hover {
+    border-color: #667eea;
+}
+
+.model-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* 按钮样式 */
+#predict-btn {
+    width: 100%;
+    padding: 15px;
+    background-color: #667eea;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 20px;
+}
+
+.predict-btn:hover:not(:disabled) {
+    background-color: #5a67d8;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.predict-btn:disabled {
+    background-color: #a0aec0;
+    cursor: not-allowed;
+}
+
+/* 加载状态 */
+.loading {
+    display: none;
+    text-align: center;
+    padding: 30px;
+}
+
+.loading-spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+    color: #4a5568;
+    font-weight: 500;
+}
+
+/* 结果弹窗 */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 15px;
+    padding: 30px;
+    max-width: 90%;
+    width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: modalSlide 0.3s ease-out;
+}
+
+@keyframes modalSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.close-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 24px;
+    color: #a0aec0;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.close-btn:hover {
+    color: #4a5568;
+}
+
+.modal-title {
+    text-align: center;
+    color: #4a5568;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 25px;
+    border-bottom: 2px solid #edf2f7;
+    padding-bottom: 15px;
+}
+
+/* 结果统计 */
+.result-stats {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.stat-item {
+    background-color: #f7fafc;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    flex: 1;
+    min-width: 150px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stat-number {
+    font-size: 36px;
+    font-weight: 700;
+    color: #667eea;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    color: #4a5568;
+    font-size: 14px;
+}
+
+/* 攻击详情 */
+.attack-details {
+    margin-bottom: 30px;
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #4a5568;
+    margin-bottom: 15px;
+    border-left: 4px solid #667eea;
+    padding-left: 10px;
+}
+
+.result-items {
+    max-height: 300px;
+    overflow-y: auto;
+    background-color: #f7fafc;
+    border-radius: 10px;
+    padding: 15px;
+}
+
+.result-item {
+    padding: 10px;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.result-item:last-child {
+    border-bottom: none;
+}
+
+/* 图表容器 */
+.chart-container {
+    height: 300px;
+    margin-bottom: 20px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .container {
+        padding: 20px;
+        margin: 10px;
+    }
+    
+    .title {
+        font-size: 24px;
+    }
+    
+    .file-upload-area {
+        padding: 30px 15px;
+    }
+    
+    .predict-btn {
+        font-size: 16px;
+        padding: 12px;
+    }
+    
+    .modal-content {
+        padding: 20px;
+        margin: 20px;
+    }
+    
+    .stat-number {
+        font-size: 28px;
+    }
+    
+    .chart-container {
+        height: 250px;
+    }
+}
+
+@media (max-width: 480px) {
+    .result-stats {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .stat-item {
+        min-width: auto;
+    }
+    
+    .modal-content {
+        padding: 15px;
+        margin: 10px;
+    }
+}
