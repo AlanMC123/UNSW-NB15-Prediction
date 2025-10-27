@@ -88,12 +88,27 @@ def main():
         attack_label_names = None
     
     # 创建并训练模型
-    attack_model = create_catboost_model_for_attack_cat()
+    attack_model = create_catboost_model_for_attack_cat(verbose=True)
     print("正在训练attack_cat预测模型...")
+    print("模型参数:", attack_model.get_params())
     start_time = time.time()
-    attack_model.fit(X_train, y_train_attack)
+    # 使用verbose=True显示训练过程
+    attack_model.fit(X_train, y_train_attack, verbose=True)
     train_time = time.time() - start_time
     print(f"模型训练完成，耗时: {train_time:.2f}秒")
+    
+    # 输出模型详细信息
+    print("\n模型详细信息:")
+    print(f"迭代次数: {attack_model.tree_count_}")
+    print(f"学习率: {attack_model.get_param('learning_rate')}")
+    print(f"损失函数: {attack_model.get_param('loss_function')}")
+    
+    # 输出特征重要性
+    print("\n特征重要性（前10个）:")
+    importances = attack_model.get_feature_importance()
+    indices = np.argsort(importances)[::-1][:10]
+    for i in indices:
+        print(f"{feature_columns[i]}: {importances[i]:.6f}")
     
     # 评估模型
     accuracy, report = evaluate_model(attack_model, X_test, y_test_attack, attack_label_names)
@@ -107,12 +122,27 @@ def main():
     y_test_label = test_df_processed['label']
     
     # 创建并训练模型
-    label_model = create_catboost_model_for_label()
+    label_model = create_catboost_model_for_label(verbose=True)
     print("正在训练label预测模型...")
+    print("模型参数:", label_model.get_params())
     start_time = time.time()
-    label_model.fit(X_train, y_train_label)
+    # 使用verbose=True显示训练过程
+    label_model.fit(X_train, y_train_label, verbose=True)
     train_time = time.time() - start_time
     print(f"模型训练完成，耗时: {train_time:.2f}秒")
+    
+    # 输出模型详细信息
+    print("\n模型详细信息:")
+    print(f"迭代次数: {label_model.tree_count_}")
+    print(f"学习率: {label_model.get_param('learning_rate')}")
+    print(f"损失函数: {label_model.get_param('loss_function')}")
+    
+    # 输出特征重要性
+    print("\n特征重要性（前10个）:")
+    importances = label_model.get_feature_importance()
+    indices = np.argsort(importances)[::-1][:10]
+    for i in indices:
+        print(f"{feature_columns[i]}: {importances[i]:.6f}")
     
     # 评估模型
     accuracy, report = evaluate_model(label_model, X_test, y_test_label, ['Normal', 'Attack'])

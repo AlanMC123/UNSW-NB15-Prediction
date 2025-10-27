@@ -5,6 +5,8 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import time
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # 导入基学习器模块
 from xgboost_model import create_xgboost_model_for_attack_cat, create_xgboost_model_for_label
@@ -14,11 +16,9 @@ from catboost_model import create_catboost_model_for_attack_cat, create_catboost
 # 设置随机种子以确保结果可复现
 np.random.seed(42)
 
-# 加载数据集
+# 加载与读取书记
 train_file_path = r'd:\code\大作业\数据\UNSW_NB15_training-set.csv'
 test_file_path = r'd:\code\大作业\数据\UNSW_NB15_testing-set.csv'
-
-# 读取训练集和测试集
 df_train = pd.read_csv(train_file_path)
 df_test = pd.read_csv(test_file_path)
 
@@ -31,6 +31,7 @@ class DataPreprocessor:
         self.categorical_columns = []
         self.drop_columns = ['id']  # 需要删除的列
         self.label_encoders = {}  # 存储每个分类列的编码器
+        self.feature_columns = []  # 存储特征列名，用于特征重要性展示
     
     def fit(self, df):
         # 处理缺失值
@@ -53,12 +54,7 @@ class DataPreprocessor:
             print("attack_cat类别分布:")
             for cat, count in attack_cat_counts.items():
                 print(f"  {cat}: {count}个样本 ({count/len(df)*100:.2f}%)")
-            
-            # 检查是否有类别样本数过少
-            min_samples = attack_cat_counts.min()
-            if min_samples < 10:
-                print(f"警告: 存在样本数少于10的类别，最少样本数为{min_samples}")
-                
+                           
             self.label_encoder_attack_cat.fit(df['attack_cat'].unique())
             print(f"attack_cat类别总数: {len(self.label_encoder_attack_cat.classes_)}")
             print(f"attack_cat类别列表: {list(self.label_encoder_attack_cat.classes_)}")
@@ -71,10 +67,10 @@ class DataPreprocessor:
             print(f"label类别列表: {list(self.label_encoder_label.classes_)}")
         
         # 准备用于标准化的特征
-        feature_columns = [col for col in df.columns if col not in self.drop_columns + ['attack_cat', 'label']]
+        self.feature_columns = [col for col in df.columns if col not in self.drop_columns + ['attack_cat', 'label']]
         
         # 拟合标准化器
-        self.scaler.fit(df[feature_columns])
+        self.scaler.fit(df[self.feature_columns])
         
         return self
     
@@ -89,11 +85,8 @@ class DataPreprocessor:
                 # 处理测试集中可能出现的新类别
                 df[col] = df[col].apply(lambda x: len(le.classes_) if x not in le.classes_ else le.transform([x])[0])
         
-        # 准备特征
-        feature_columns = [col for col in df.columns if col not in self.drop_columns + ['attack_cat', 'label']]
-        
         # 标准化特征
-        X = self.scaler.transform(df[feature_columns])
+        X = self.scaler.transform(df[self.feature_columns])
         
         # 处理目标变量
         y_attack_cat = None
@@ -126,16 +119,29 @@ class StackingClassifier:
         self.kf = KFold(n_splits=n_folds, shuffle=True, random_state=42)
         self.fitted_base_models = []
         self.num_classes = None  # 将在fit时确定
-        
-    def fit(self, X, y):
+        self.label_encoder = None  # 保存标签编码器用于调试
+         
+    def fit(self, X, y, label_encoder=None):
         # 确保y是NumPy数组
         if hasattr(y, 'values'):
             y_values = y.values
         else:
             y_values = y
         
+        # 保存标签编码器
+        self.label_encoder = label_encoder
+        
         # 确定类别数量
         self.num_classes = len(np.unique(y_values))
+        
+        # 打印训练数据中各类别的分布
+        #unique_classes, counts = np.unique(y_values, return_counts=True)
+        #print(f"训练数据类别分布: {dict(zip(unique_classes, counts))}")
+        # 如果有标签编码器，打印类别名称
+        if label_encoder and hasattr(label_encoder, 'classes_'):
+            print("类别名称映射:")
+            for i, cls in enumerate(label_encoder.classes_):
+                print(f"  {i}: {cls}")
         
         # 为元学习器创建训练数据 - 对于多分类问题，使用每个基学习器的类别预测和概率
         # 直接使用类别数量来确定概率维度
@@ -294,6 +300,59 @@ def create_models_for_label():
     
     return models
 
+# 获取特征重要性
+def get_feature_importance(model, model_name, feature_names):
+    """
+    从模型中提取特征重要性
+    """
+    importances = None
+    
+    try:
+        # 尝试获取不同模型的特征重要性
+        if hasattr(model, 'feature_importances_'):
+            # XGBoost, Random Forest, CatBoost
+            importances = model.feature_importances_
+        elif hasattr(model, 'coef_'):
+            # Logistic Regression
+            # 对于逻辑回归，取系数的绝对值作为重要性度量
+            importances = np.abs(model.coef_[0])
+        else:
+            print(f"警告: 模型 {model_name} 不支持特征重要性提取")
+            return None
+        
+        # 创建特征重要性字典
+        importance_dict = dict(zip(feature_names, importances))
+        
+        # 按重要性排序
+        sorted_importance = sorted(importance_dict.items(), key=lambda x: x[1], reverse=True)
+        
+        return sorted_importance
+    except Exception as e:
+        print(f"提取 {model_name} 的特征重要性时出错: {e}")
+        return None
+
+# 可视化特征重要性
+def plot_feature_importance(importance_list, model_name, n_features=10):
+    """
+    可视化特征重要性
+    """
+    if not importance_list:
+        return
+    
+    # 只取前n个最重要的特征
+    top_features = importance_list[:n_features]
+    features = [item[0] for item in top_features]
+    importances = [item[1] for item in top_features]
+    
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x=importances, y=features)
+    plt.title(f'{model_name} - 特征重要性（前{n_features}个）')
+    plt.xlabel('重要性分数')
+    plt.ylabel('特征')
+    plt.tight_layout()
+    plt.savefig(f'{model_name}_feature_importance.png')
+    plt.close()
+
 # 评估模型
 def evaluate_model(model_name, y_true, y_pred, label_encoder):
     # 计算准确率
@@ -330,14 +389,7 @@ def evaluate_model(model_name, y_true, y_pred, label_encoder):
     
     return acc, report, cm
 
-# 主函数
 def main():
-    print("开始处理UNSW_NB15数据集...")
-    
-    # 打印数据集基本信息
-    print(f"训练集大小: {df_train.shape[0]}行, {df_train.shape[1]}列")
-    print(f"测试集大小: {df_test.shape[0]}行, {df_test.shape[1]}列")
-    
     # 初始化数据预处理器
     preprocessor = DataPreprocessor()
     
@@ -364,15 +416,13 @@ def main():
     if y_train_label is not None:
         print(f"训练集中label唯一值数量: {len(np.unique(y_train_label))}")
         print(f"测试集中label唯一值数量: {len(np.unique(y_test_label))}")
-    
-    # 1. 处理attack_cat预测
-    print("\n===== 处理attack_cat预测任务 =====")
-    
+     
     # 创建模型
     attack_cat_models = create_models_for_attack_cat()
     
     # 训练和评估模型
     attack_cat_results = {}
+    attack_cat_feature_importances = {}
     
     print("开始训练attack_cat预测模型...")
     for name, model in attack_cat_models.items():
@@ -387,6 +437,24 @@ def main():
         # 评估模型
         acc, report, cm = evaluate_model(name, y_test_attack_cat, y_pred, preprocessor.label_encoder_attack_cat)
         
+        # 获取和存储特征重要性
+        if name != 'Stacking':  # 对于Stacking模型，我们分别获取基学习器的特征重要性
+            importance = get_feature_importance(model, name, preprocessor.feature_columns)
+            if importance:
+                attack_cat_feature_importances[name] = importance
+                plot_feature_importance(importance, f'{name}_attack_cat')
+                print(f"\n{name} 特征重要性（attack_cat预测）:")
+                for i, (feature, score) in enumerate(importance[:10]):  # 打印前10个特征
+                    print(f"{i+1}. {feature}: {score:.4f}")
+        elif name == 'Stacking' and hasattr(model, 'fitted_base_models'):
+            # 对于Stacking模型，获取每个基学习器的特征重要性
+            for i, base_model in enumerate(model.fitted_base_models):
+                base_model_name = list(attack_cat_models.keys())[i]  # 获取基学习器名称
+                if base_model_name != 'Stacking':
+                    importance = get_feature_importance(base_model, f'{base_model_name}_in_Stacking', preprocessor.feature_columns)
+                    if importance:
+                        attack_cat_feature_importances[f'{base_model_name}_in_Stacking'] = importance
+        
         end_time = time.time()
         
         # 存储结果
@@ -394,19 +462,18 @@ def main():
             'Accuracy': acc,
             'Report': report,
             'Confusion Matrix': cm,
-            'Time (s)': end_time - start_time
+            'Time (s)': end_time - start_time,
+            'Feature Importance': attack_cat_feature_importances.get(name) if name != 'Stacking' else None
         }
         
         print(f"{name} - 准确率: {acc:.4f}, 耗时: {end_time - start_time:.2f}秒")
-    
-    # 2. 处理label预测
-    print("\n===== 处理label预测任务 =====")
     
     # 创建模型
     label_models = create_models_for_label()
     
     # 训练和评估模型
     label_results = {}
+    label_feature_importances = {}
     
     print("开始训练label预测模型...")
     for name, model in label_models.items():
@@ -421,6 +488,24 @@ def main():
         # 评估模型
         acc, report, cm = evaluate_model(name, y_test_label, y_pred, preprocessor.label_encoder_label)
         
+        # 获取和存储特征重要性
+        if name != 'Stacking':  # 对于Stacking模型，我们分别获取基学习器的特征重要性
+            importance = get_feature_importance(model, name, preprocessor.feature_columns)
+            if importance:
+                label_feature_importances[name] = importance
+                plot_feature_importance(importance, f'{name}_label')
+                print(f"\n{name} 特征重要性（label预测）:")
+                for i, (feature, score) in enumerate(importance[:10]):  # 打印前10个特征
+                    print(f"{i+1}. {feature}: {score:.4f}")
+        elif name == 'Stacking' and hasattr(model, 'fitted_base_models'):
+            # 对于Stacking模型，获取每个基学习器的特征重要性
+            for i, base_model in enumerate(model.fitted_base_models):
+                base_model_name = list(label_models.keys())[i]  # 获取基学习器名称
+                if base_model_name != 'Stacking':
+                    importance = get_feature_importance(base_model, f'{base_model_name}_in_Stacking', preprocessor.feature_columns)
+                    if importance:
+                        label_feature_importances[f'{base_model_name}_in_Stacking'] = importance
+        
         end_time = time.time()
         
         # 存储结果
@@ -428,13 +513,11 @@ def main():
             'Accuracy': acc,
             'Report': report,
             'Confusion Matrix': cm,
-            'Time (s)': end_time - start_time
+            'Time (s)': end_time - start_time,
+            'Feature Importance': label_feature_importances.get(name) if name != 'Stacking' else None
         }
         
         print(f"{name} - 准确率: {acc:.4f}, 耗时: {end_time - start_time:.2f}秒")
-    
-    # 打印详细结果
-    print("\n===== 模型性能详细报告 =====")
     
     # attack_cat预测结果
     print("\nattack_cat预测结果:")
@@ -452,7 +535,26 @@ def main():
         print("分类报告:")
         print(metrics['Report'])
     
-    print("\n模型训练和评估完成!")
+    # 输出特征重要性汇总
+    print("\n===== 特征重要性汇总 =====")
+    
+    print("\nattack_cat预测任务特征重要性:")
+    for model_name, importance in attack_cat_feature_importances.items():
+        if model_name.endswith('_in_Stacking'):
+            continue  # 跳过Stacking中的基学习器，避免重复输出
+        print(f"\n{model_name} 前5个重要特征:")
+        for i, (feature, score) in enumerate(importance[:5]):
+            print(f"  {i+1}. {feature}: {score:.4f}")
+    
+    print("\nlabel预测任务特征重要性:")
+    for model_name, importance in label_feature_importances.items():
+        if model_name.endswith('_in_Stacking'):
+            continue  # 跳过Stacking中的基学习器，避免重复输出
+        print(f"\n{model_name} 前5个重要特征:")
+        for i, (feature, score) in enumerate(importance[:5]):
+            print(f"  {i+1}. {feature}: {score:.4f}")
+    
+    print("\n模型训练和评估完成! 特征重要性可视化图表已保存为PNG文件。")
 
 # 运行主函数
 if __name__ == "__main__":
