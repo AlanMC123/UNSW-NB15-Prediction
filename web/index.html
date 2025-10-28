@@ -4,8 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>网络攻击检测系统</title>
-    <!-- 引入Chart.js用于数据可视化 -->
+    <!-- 引入Chart.js用于数据可视化 (添加备用源) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // 检查Chart.js是否加载成功
+        if (typeof Chart === 'undefined') {
+            // 备用CDN源1
+            const script1 = document.createElement('script');
+            script1.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js';
+            script1.onload = function() {
+                console.log('Chart.js 备用源1加载成功');
+            };
+            script1.onerror = function() {
+                // 备用CDN源2
+                const script2 = document.createElement('script');
+                script2.src = 'https://unpkg.com/chart.js@3.9.1/dist/chart.min.js';
+                script2.onload = function() {
+                    console.log('Chart.js 备用源2加载成功');
+                };
+                script2.onerror = function() {
+                    console.log('Chart.js 加载失败，将使用文本统计模式');
+                };
+                document.head.appendChild(script2);
+            };
+            document.head.appendChild(script1);
+        }
+    </script>
     <!-- 引入自定义样式 -->
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -73,6 +97,14 @@
                 <h3 class="section-title">攻击类型分布</h3>
                 <div class="chart-container">
                     <canvas id="attack-chart"></canvas>
+                </div>
+            </div>
+            
+            <!-- 特征重要性部分 -->
+            <div class="feature-importance">
+                <h3 class="section-title">模型重要特征</h3>
+                <div id="feature-importance-content">
+                    <!-- 特征重要性将在这里动态显示 -->
                 </div>
             </div>
         </div>

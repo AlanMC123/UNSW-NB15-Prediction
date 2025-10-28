@@ -89,7 +89,7 @@ def main():
     
     # 注意：需要根据实际数据的类别数量调整num_class参数
     # 先创建模型
-    attack_model = create_xgboost_model_for_attack_cat()
+    attack_model = create_xgboost_model_for_attack_cat(verbose=True)
     
     # 根据实际数据调整num_class参数
     num_classes = len(train_df_processed['attack_cat'].unique())
@@ -97,10 +97,24 @@ def main():
         attack_model.set_params(num_class=num_classes)
     
     print(f"正在训练attack_cat预测模型（{num_classes}个类别）...")
+    print("模型参数:", attack_model.get_params())
     start_time = time.time()
-    attack_model.fit(X_train, y_train_attack)
+    # 使用verbose=True显示训练过程
+    attack_model.fit(X_train, y_train_attack, verbose=True)
     train_time = time.time() - start_time
     print(f"模型训练完成，耗时: {train_time:.2f}秒")
+    
+    # 输出模型详细信息
+    print("\n模型详细信息:")
+    print(f"训练的树的数量: {attack_model.n_estimators}")
+    if hasattr(attack_model, 'best_ntree_limit'):
+        print(f"最佳树数量: {attack_model.best_ntree_limit}")
+    if hasattr(attack_model, 'feature_importances_'):
+        print("\n特征重要性（前10个）:")
+        importances = attack_model.feature_importances_
+        indices = np.argsort(importances)[::-1][:10]
+        for i in indices:
+            print(f"{feature_columns[i]}: {importances[i]:.6f}")
     
     # 评估模型
     accuracy, report = evaluate_model(attack_model, X_test, y_test_attack, attack_label_names)
@@ -114,12 +128,26 @@ def main():
     y_test_label = test_df_processed['label']
     
     # 创建并训练模型
-    label_model = create_xgboost_model_for_label()
+    label_model = create_xgboost_model_for_label(verbose=True)
     print("正在训练label预测模型...")
+    print("模型参数:", label_model.get_params())
     start_time = time.time()
-    label_model.fit(X_train, y_train_label)
+    # 使用verbose=True显示训练过程
+    label_model.fit(X_train, y_train_label, verbose=True)
     train_time = time.time() - start_time
     print(f"模型训练完成，耗时: {train_time:.2f}秒")
+    
+    # 输出模型详细信息
+    print("\n模型详细信息:")
+    print(f"训练的树的数量: {label_model.n_estimators}")
+    if hasattr(label_model, 'best_ntree_limit'):
+        print(f"最佳树数量: {label_model.best_ntree_limit}")
+    if hasattr(label_model, 'feature_importances_'):
+        print("\n特征重要性（前10个）:")
+        importances = label_model.feature_importances_
+        indices = np.argsort(importances)[::-1][:10]
+        for i in indices:
+            print(f"{feature_columns[i]}: {importances[i]:.6f}")
     
     # 评估模型
     accuracy, report = evaluate_model(label_model, X_test, y_test_label, ['Normal', 'Attack'])

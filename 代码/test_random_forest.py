@@ -147,14 +147,40 @@ def main():
     print("\n===== 测试attack_cat预测模型 =====")
     
     # 创建模型
-    attack_cat_model = create_random_forest_model_for_attack_cat()
+    attack_cat_model = create_random_forest_model_for_attack_cat(verbose=2)
+    
+    # 输出模型参数
+    print("模型参数:")
+    for param, value in attack_cat_model.get_params().items():
+        print(f"  {param}: {value}")
     
     # 训练模型
     print("训练attack_cat预测模型...")
     start_time = time.time()
+    # 启用详细输出
     attack_cat_model.fit(X_train, y_train_attack_cat)
     training_time = time.time() - start_time
     print(f"训练完成，耗时: {training_time:.2f}秒")
+    
+    # 输出模型详细信息
+    print("\n模型详细信息:")
+    print(f"树的数量: {attack_cat_model.n_estimators}")
+    print(f"最大深度: {attack_cat_model.max_depth}")
+    print(f"最小样本分割数: {attack_cat_model.min_samples_split}")
+    print(f"最小叶节点样本数: {attack_cat_model.min_samples_leaf}")
+    print(f"最大特征数: {attack_cat_model.max_features}")
+    
+    # 输出特征重要性
+    print("\n特征重要性（前15个）:")
+    if hasattr(attack_cat_model, 'feature_importances_'):
+        importances = attack_cat_model.feature_importances_
+        # 获取特征名称
+        feature_columns = [col for col in df_train.columns if col not in preprocessor.drop_columns + ['attack_cat', 'label']]
+        # 按重要性排序
+        indices = np.argsort(importances)[::-1][:15]  # 前15个最重要的特征
+        for f in range(len(indices)):
+            idx = indices[f]
+            print(f"  {f + 1}. {feature_columns[idx]}: {importances[idx]:.6f}")
     
     # 在测试集上预测
     print("在测试集上进行预测...")
@@ -176,14 +202,40 @@ def main():
     print("\n===== 测试label预测模型 =====")
     
     # 创建模型
-    label_model = create_random_forest_model_for_label()
+    label_model = create_random_forest_model_for_label(verbose=2)
+    
+    # 输出模型参数
+    print("模型参数:")
+    for param, value in label_model.get_params().items():
+        print(f"  {param}: {value}")
     
     # 训练模型
     print("训练label预测模型...")
     start_time = time.time()
+    # 启用详细输出
     label_model.fit(X_train, y_train_label)
     training_time = time.time() - start_time
     print(f"训练完成，耗时: {training_time:.2f}秒")
+    
+    # 输出模型详细信息
+    print("\n模型详细信息:")
+    print(f"树的数量: {label_model.n_estimators}")
+    print(f"最大深度: {label_model.max_depth}")
+    print(f"最小样本分割数: {label_model.min_samples_split}")
+    print(f"最小叶节点样本数: {label_model.min_samples_leaf}")
+    print(f"最大特征数: {label_model.max_features}")
+    
+    # 输出特征重要性
+    print("\n特征重要性（前15个）:")
+    if hasattr(label_model, 'feature_importances_'):
+        importances = label_model.feature_importances_
+        # 获取特征名称
+        feature_columns = [col for col in df_train.columns if col not in preprocessor.drop_columns + ['attack_cat', 'label']]
+        # 按重要性排序
+        indices = np.argsort(importances)[::-1][:15]  # 前15个最重要的特征
+        for f in range(len(indices)):
+            idx = indices[f]
+            print(f"  {f + 1}. {feature_columns[idx]}: {importances[idx]:.6f}")
     
     # 在测试集上预测
     print("在测试集上进行预测...")
